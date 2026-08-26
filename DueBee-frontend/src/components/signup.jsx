@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const API_URL = "http://localhost:8000";
+const API_URL = "http://localhost:8001";
 
 function SignUp({ onAuthSuccess, onSwitchToSignIn }) {
   const [email, setEmail] = useState("");
