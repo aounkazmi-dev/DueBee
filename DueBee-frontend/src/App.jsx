@@ -1,11 +1,17 @@
 import { useState } from "react";
 import SignIn from "./components/SignIn";
 import SignUp from "./components/SignUp";
+import Dashboard from "./components/Dashboard";
 import "./styles/index.css";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token") || "");
   const [authMode, setAuthMode] = useState("signin");
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setToken("");
+  };
 
   if (!token) {
     return authMode === "signin" ? (
@@ -15,7 +21,7 @@ function App() {
     );
   }
 
-  return <h1 className="text-white text-center mt-20">Logged in — bills page comes next.</h1>;
+  return <Dashboard token={token} onLogout={handleLogout} />;
 }
 
 export default App;
