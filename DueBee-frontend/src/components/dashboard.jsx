@@ -60,7 +60,7 @@ function Dashboard({ token, onLogout }) {
       <div className="mx-auto max-w-2xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/duebee.png" alt="DueBee" className="h-8 w-auto" />
+            <img src="/logo.png" alt="DueBee" className="h-8 w-auto" />
             <h1 className="text-xl font-bold text-white">DueBee</h1>
           </div>
           <button
