@@ -22,6 +22,10 @@ class Bill(Base):
     vendor = Column(String, nullable=False)
     amount = Column(Numeric(10, 2), nullable=False)
     due_date = Column(Date, nullable=False)
+    billing_month = Column(String, nullable=False)   # "2026-08" format
+    category = Column(String, nullable=False)         # Electricity, Gas, Water, Internet, etc.
+    status = Column(String, nullable=False, default="unpaid")  # unpaid, paid, overdue
+    consumption = Column(Numeric(10, 2), nullable=True)  # optional: units/kWh consumed
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
