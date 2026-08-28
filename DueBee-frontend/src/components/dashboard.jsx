@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API_URL = "http://localhost:8000";
+const API_URL = "http://localhost:8001";
 
 function Dashboard({ token, onLogout }) {
   const [bills, setBills] = useState([]);
@@ -9,6 +9,7 @@ function Dashboard({ token, onLogout }) {
   const [amount, setAmount] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState("");
+  const [scanning, setScanning] = useState(false);
 
   const fetchBills = async () => {
     setLoading(true);
@@ -31,6 +32,52 @@ function Dashboard({ token, onLogout }) {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleScan = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+  
+    setScanning(true);
+    setError("");
+  
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+  
+      const res = await fetch(`${API_URL}/bills/scan`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+  
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Could not read the bill image");
+      }
+  
+      const data = await res.json();
+  
+      if (data.vendor) setVendor(data.vendor);
+      if (data.amount) setAmount(data.amount);
+      if (data.due_date) setDueDate(normalizeDate(data.due_date));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setScanning(false);
+      e.target.value = "";
+    }
+  };
+
+  // OCR might return DD/MM/YYYY or "3 Sep 2026" — the <input type="date"> needs YYYY-MM-DD
+  const normalizeDate = (raw) => {
+    const isoMatch = raw.match(/\d{4}-\d{2}-\d{2}/);
+    if (isoMatch) return isoMatch[0];
+
+    const parsed = new Date(raw);
+    if (!isNaN(parsed)) return parsed.toISOString().split("T")[0];
+
+    return "";
+  };
 
   const handleAddBill = async (e) => {
     e.preventDefault();
@@ -71,9 +118,23 @@ function Dashboard({ token, onLogout }) {
           </button>
         </div>
 
+        <div className="mt-10">
+          <label className="block text-sm/6 font-medium text-gray-100">
+            Scan a bill photo
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleScan}
+            disabled={scanning}
+            className="mt-2 block w-full text-sm text-gray-400 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-500 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-400 disabled:opacity-60"
+          />
+          {scanning && <p className="mt-2 text-sm text-gray-500">Reading bill…</p>}
+        </div>
+
         <form
           onSubmit={handleAddBill}
-          className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-end"
+          className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-end"
         >
           <div>
             <label className="block text-sm/6 font-medium text-gray-100">Vendor</label>
