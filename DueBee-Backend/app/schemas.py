@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Optional
 from pydantic import BaseModel
 
 
@@ -6,6 +7,10 @@ class BillCreate(BaseModel):
     vendor: str
     amount: float
     due_date: date
+    billing_month: str
+    category: str
+    status: str = "unpaid"
+    consumption: Optional[float] = None
 
 
 class BillOut(BillCreate):
