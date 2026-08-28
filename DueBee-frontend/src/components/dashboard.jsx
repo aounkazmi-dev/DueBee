@@ -2,14 +2,27 @@ import { useState, useEffect } from "react";
 
 const API_URL = "http://localhost:8001";
 
+const CATEGORIES = ["Electricity", "Gas", "Water", "Internet", "Other"];
+const STATUSES = ["unpaid", "paid", "overdue"];
+
+function daysUntil(dueDate) {
+  const diff = new Date(dueDate) - new Date();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
 function Dashboard({ token, onLogout }) {
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [showForm, setShowForm] = useState(false);
+
   const [vendor, setVendor] = useState("");
   const [amount, setAmount] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [error, setError] = useState("");
-  const [scanning, setScanning] = useState(false);
+  const [billingMonth, setBillingMonth] = useState("");
+  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [status, setStatus] = useState("unpaid");
+  const [consumption, setConsumption] = useState("");
 
   const fetchBills = async () => {
     setLoading(true);
@@ -26,58 +39,13 @@ function Dashboard({ token, onLogout }) {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (token) await fetchBills();
+    const loadBills = async () => {
+      await fetchBills();
     };
-    fetchData();
+  
+    loadBills();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const handleScan = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-  
-    setScanning(true);
-    setError("");
-  
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-  
-      const res = await fetch(`${API_URL}/bills/scan`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-  
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || "Could not read the bill image");
-      }
-  
-      const data = await res.json();
-  
-      if (data.vendor) setVendor(data.vendor);
-      if (data.amount) setAmount(data.amount);
-      if (data.due_date) setDueDate(normalizeDate(data.due_date));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setScanning(false);
-      e.target.value = "";
-    }
-  };
-
-  // OCR might return DD/MM/YYYY or "3 Sep 2026" — the <input type="date"> needs YYYY-MM-DD
-  const normalizeDate = (raw) => {
-    const isoMatch = raw.match(/\d{4}-\d{2}-\d{2}/);
-    if (isoMatch) return isoMatch[0];
-
-    const parsed = new Date(raw);
-    if (!isNaN(parsed)) return parsed.toISOString().split("T")[0];
-
-    return "";
-  };
 
   const handleAddBill = async (e) => {
     e.preventDefault();
@@ -89,22 +57,40 @@ function Dashboard({ token, onLogout }) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ vendor, amount: parseFloat(amount), due_date: dueDate }),
+        body: JSON.stringify({
+          vendor,
+          amount: parseFloat(amount),
+          due_date: dueDate,
+          billing_month: billingMonth,
+          category,
+          status,
+          consumption: consumption ? parseFloat(consumption) : null,
+        }),
       });
       if (!res.ok) throw new Error("Could not add bill");
 
       setVendor("");
       setAmount("");
       setDueDate("");
+      setBillingMonth("");
+      setCategory(CATEGORIES[0]);
+      setStatus("unpaid");
+      setConsumption("");
+      setShowForm(false);
       fetchBills();
     } catch (err) {
       setError(err.message);
     }
   };
 
+  const upcoming = [...bills]
+    .filter((b) => b.status !== "paid")
+    .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+
   return (
     <div className="min-h-full px-6 py-12 lg:px-8">
       <div className="mx-auto max-w-2xl">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="DueBee" className="h-8 w-auto" />
@@ -118,87 +104,144 @@ function Dashboard({ token, onLogout }) {
           </button>
         </div>
 
-        <div className="mt-10">
-          <label className="block text-sm/6 font-medium text-gray-100">
-            Scan a bill photo
-          </label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleScan}
-            disabled={scanning}
-            className="mt-2 block w-full text-sm text-gray-400 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-500 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-400 disabled:opacity-60"
-          />
-          {scanning && <p className="mt-2 text-sm text-gray-500">Reading bill…</p>}
+        <div className="mt-10 rounded-xl border border-white/10 divide-y divide-white/10">
+          {/* Upcoming Bills */}
+          <section className="p-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
+                Upcoming Bills
+              </h2>
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="text-sm font-semibold text-indigo-400 hover:text-indigo-300"
+              >
+                {showForm ? "Cancel" : "+ Add bill"}
+              </button>
+            </div>
+
+            {showForm && (
+              <form onSubmit={handleAddBill} className="mt-4 grid grid-cols-2 gap-3">
+                <input
+                  value={vendor}
+                  onChange={(e) => setVendor(e.target.value)}
+                  required
+                  placeholder="Vendor (e.g. LESCO)"
+                  className="col-span-2 rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:outline-indigo-500"
+                />
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  required
+                  placeholder="Amount"
+                  className="rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:outline-indigo-500"
+                />
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 focus:outline-2 focus:outline-indigo-500"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c} className="bg-gray-900">
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <label className="text-xs text-gray-400 col-span-2 -mb-2">Due date</label>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  required
+                  className="rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 focus:outline-2 focus:outline-indigo-500"
+                />
+                <input
+                  type="month"
+                  value={billingMonth}
+                  onChange={(e) => setBillingMonth(e.target.value + "")}
+                  required
+                  title="Billing month"
+                  className="rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 focus:outline-2 focus:outline-indigo-500"
+                />
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 focus:outline-2 focus:outline-indigo-500"
+                >
+                  {STATUSES.map((s) => (
+                    <option key={s} value={s} className="bg-gray-900">
+                      {s}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  value={consumption}
+                  onChange={(e) => setConsumption(e.target.value)}
+                  placeholder="Units consumed (optional)"
+                  className="rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:outline-indigo-500"
+                />
+                <button
+                  type="submit"
+                  className="col-span-2 mt-1 rounded-md bg-indigo-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-400"
+                >
+                  Save Bill
+                </button>
+                {error && <p className="col-span-2 text-sm text-red-400">{error}</p>}
+              </form>
+            )}
+
+            <div className="mt-4">
+              {loading ? (
+                <p className="text-sm text-gray-500">Loading…</p>
+              ) : upcoming.length === 0 ? (
+                <p className="text-sm text-gray-500">No upcoming bills.</p>
+              ) : (
+                <ul className="divide-y divide-white/10">
+                  {upcoming.map((bill) => {
+                    const days = daysUntil(bill.due_date);
+                    return (
+                      <li key={bill.id} className="flex items-center justify-between py-3">
+                        <div>
+                          <p className="text-sm font-medium text-white">{bill.vendor}</p>
+                          <p className="text-xs text-gray-500">{bill.category}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-gray-100">
+                            Rs {Number(bill.amount).toLocaleString()}
+                          </p>
+                          <p className={`text-xs ${days < 3 ? "text-red-400" : "text-gray-500"}`}>
+                            {days < 0 ? "overdue" : `${days} days`}
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </section>
+
+          {/* AI Forecast — placeholder, wired up in a later phase */}
+          <section className="p-6">
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
+              AI Forecast
+            </h2>
+            <p className="mt-3 text-sm text-gray-500">
+              Coming soon — predicted next-bill range once enough billing history exists.
+            </p>
+          </section>
+
+          {/* AI Insights — placeholder, wired up in a later phase */}
+          <section className="p-6">
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
+              AI Insights
+            </h2>
+            <p className="mt-3 text-sm text-gray-500">
+              Coming soon — flags for unusual spending patterns across your bills.
+            </p>
+          </section>
         </div>
-
-        <form
-          onSubmit={handleAddBill}
-          className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-end"
-        >
-          <div>
-            <label className="block text-sm/6 font-medium text-gray-100">Vendor</label>
-            <input
-              value={vendor}
-              onChange={(e) => setVendor(e.target.value)}
-              required
-              placeholder="LESCO"
-              className="mt-2 block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6"
-            />
-          </div>
-          <div>
-            <label className="block text-sm/6 font-medium text-gray-100">Amount</label>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-              placeholder="8450"
-              className="mt-2 block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6"
-            />
-          </div>
-          <div>
-            <label className="block text-sm/6 font-medium text-gray-100">Due date</label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              required
-              className="mt-2 block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6"
-            />
-          </div>
-          <div className="sm:col-span-3">
-            <button
-              type="submit"
-              className="rounded-md bg-indigo-500 px-4 py-1.5 text-sm/6 font-semibold text-white hover:bg-indigo-400"
-            >
-              Add Bill
-            </button>
-            {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
-          </div>
-        </form>
-
-        <h2 className="mt-12 text-sm font-semibold text-gray-400 uppercase tracking-wide">
-          Your Bills
-        </h2>
-
-        {loading ? (
-          <p className="mt-4 text-sm text-gray-500">Loading…</p>
-        ) : bills.length === 0 ? (
-          <p className="mt-4 text-sm text-gray-500">No bills yet — add one above.</p>
-        ) : (
-          <ul className="mt-4 divide-y divide-white/10 rounded-md border border-white/10">
-            {bills.map((bill) => (
-              <li key={bill.id} className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium text-white">{bill.vendor}</p>
-                  <p className="text-xs text-gray-500">Due {bill.due_date}</p>
-                </div>
-                <p className="text-sm font-semibold text-gray-100">Rs. {bill.amount}</p>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
     </div>
   );
