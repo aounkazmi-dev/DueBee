@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, Numeric, Date, DateTime, Foreign
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
-
+from sqlalchemy import Boolean 
 
 class User(Base):
     __tablename__ = "users"
@@ -30,3 +30,4 @@ class Bill(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     owner = relationship("User", back_populates="bills")
+    reminder_sent = Column(Boolean, nullable=False, default=False)

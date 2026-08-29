@@ -39,6 +39,43 @@ function Dashboard({ token, onLogout }) {
   const [status, setStatus] = useState("unpaid");
   const [consumption, setConsumption] = useState("");
 
+  const [forecast, setForecast] = useState(null);
+  const [insights, setInsights] = useState([]);
+
+  const fetchForecast = async (billsData) => {
+    const uniqueCategories = [...new Set(billsData.map((b) => b.category))];
+    for (const cat of uniqueCategories) {
+      try {
+        const res = await fetch(
+          `${API_URL}/analytics/forecast?category=${encodeURIComponent(cat)}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (data.enough_data) {
+          setForecast(data);
+          return;
+        }
+      } catch {
+        // skip this category, try the next
+      }
+    }
+    setForecast(null);
+  };
+
+  const fetchInsights = async () => {
+    try {
+      const res = await fetch(`${API_URL}/analytics/insights`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setInsights(data.insights || []);
+    } catch {
+      setInsights([]);
+    }
+  };
+
   const fetchBills = async () => {
     setLoading(true);
     const res = await fetch(`${API_URL}/bills`, {
@@ -51,13 +88,16 @@ function Dashboard({ token, onLogout }) {
     const data = await res.json();
     setBills(data);
     setLoading(false);
+
+    fetchForecast(data);
+    fetchInsights();
   };
 
   useEffect(() => {
     const loadBills = async () => {
       await fetchBills();
     };
-  
+
     loadBills();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -135,95 +175,96 @@ function Dashboard({ token, onLogout }) {
             </div>
 
             {showForm && (
-  <form onSubmit={handleAddBill} className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4">
-    <Field label="Vendor" className="col-span-2">
-      <input
-        value={vendor}
-        onChange={(e) => setVendor(e.target.value)}
-        required
-        placeholder="e.g. LESCO"
-        className={inputClass}
-      />
-    </Field>
+              <form onSubmit={handleAddBill} className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4">
+                <Field label="Vendor" className="col-span-2">
+                  <input
+                    value={vendor}
+                    onChange={(e) => setVendor(e.target.value)}
+                    required
+                    placeholder="e.g. LESCO"
+                    className={inputClass}
+                  />
+                </Field>
 
-    <Field label="Amount">
-      <input
-        type="number"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-        required
-        placeholder="Rs"
-        className={inputClass}
-      />
-    </Field>
+                <Field label="Amount">
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    required
+                    placeholder="Rs"
+                    className={inputClass}
+                  />
+                </Field>
 
-    <Field label="Category">
-      <select
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-        className={inputClass}
-      >
-        {CATEGORIES.map((c) => (
-          <option key={c} value={c} className="bg-gray-900">
-            {c}
-          </option>
-        ))}
-      </select>
-    </Field>
+                <Field label="Category">
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className={inputClass}
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c} value={c} className="bg-gray-900">
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
 
-    <Field label="Due date">
-      <input
-        type="date"
-        value={dueDate}
-        onChange={(e) => setDueDate(e.target.value)}
-        required
-        className={inputClass}
-      />
-    </Field>
+                <Field label="Due date">
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    required
+                    className={inputClass}
+                  />
+                </Field>
 
-    <Field label="Billing month" hint="Which month this bill covers">
-      <input
-        type="month"
-        value={billingMonth}
-        onChange={(e) => setBillingMonth(e.target.value)}
-        required
-        className={inputClass}
-      />
-    </Field>
+                <Field label="Billing month" hint="Which month this bill covers">
+                  <input
+                    type="month"
+                    value={billingMonth}
+                    onChange={(e) => setBillingMonth(e.target.value)}
+                    required
+                    className={inputClass}
+                  />
+                </Field>
 
-    <Field label="Status">
-      <select
-        value={status}
-        onChange={(e) => setStatus(e.target.value)}
-        className={inputClass}
-      >
-        {STATUSES.map((s) => (
-          <option key={s} value={s} className="bg-gray-900">
-            {s}
-          </option>
-        ))}
-      </select>
-    </Field>
+                <Field label="Status">
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className={inputClass}
+                  >
+                    {STATUSES.map((s) => (
+                      <option key={s} value={s} className="bg-gray-900">
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
 
-    <Field label="Units consumed" hint="Optional">
-      <input
-        type="number"
-        value={consumption}
-        onChange={(e) => setConsumption(e.target.value)}
-        placeholder="e.g. 320"
-        className={inputClass}
-      />
-    </Field>
+                <Field label="Units consumed" hint="Optional">
+                  <input
+                    type="number"
+                    value={consumption}
+                    onChange={(e) => setConsumption(e.target.value)}
+                    placeholder="e.g. 320"
+                    className={inputClass}
+                  />
+                </Field>
 
-    <button
-      type="submit"
-      className="col-span-2 mt-1 rounded-md bg-indigo-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-400"
-    >
-      Save Bill
-    </button>
-    {error && <p className="col-span-2 text-sm text-red-400">{error}</p>}
-  </form>
-)}
+                <button
+                  type="submit"
+                  className="col-span-2 mt-1 rounded-md bg-indigo-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-400"
+                >
+                  Save Bill
+                </button>
+                {error && <p className="col-span-2 text-sm text-red-400">{error}</p>}
+              </form>
+            )}
+
             <div className="mt-4">
               {loading ? (
                 <p className="text-sm text-gray-500">Loading…</p>
@@ -255,24 +296,62 @@ function Dashboard({ token, onLogout }) {
             </div>
           </section>
 
-          {/* AI Forecast — placeholder, wired up in a later phase */}
+          {/* AI Forecast */}
           <section className="p-6">
             <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
               AI Forecast
             </h2>
-            <p className="mt-3 text-sm text-gray-500">
-              Coming soon — predicted next-bill range once enough billing history exists.
-            </p>
+            {forecast === null ? (
+              <p className="mt-3 text-sm text-gray-500">
+                Not enough billing history yet to forecast — add a few more bills in the same category.
+              </p>
+            ) : (
+              <div className="mt-3">
+                <p className="text-sm text-gray-100">
+                  <span className="font-medium text-white">{forecast.category}</span>{" "}
+                  <span className="text-gray-500">next bill estimate</span>
+                </p>
+                <p className="mt-1 text-lg font-semibold text-white">
+                  Rs {Number(forecast.predicted_low).toLocaleString()} – Rs{" "}
+                  {Number(forecast.predicted_high).toLocaleString()}
+                </p>
+                <p
+                  className={`mt-1 text-xs font-medium ${
+                    forecast.percent_change_vs_average > 0 ? "text-red-400" : "text-green-400"
+                  }`}
+                >
+                  {forecast.percent_change_vs_average > 0 ? "▲" : "▼"}{" "}
+                  {Math.abs(forecast.percent_change_vs_average)}% vs average
+                </p>
+              </div>
+            )}
           </section>
 
-          {/* AI Insights — placeholder, wired up in a later phase */}
+          {/* AI Insights */}
           <section className="p-6">
             <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
               AI Insights
             </h2>
-            <p className="mt-3 text-sm text-gray-500">
-              Coming soon — flags for unusual spending patterns across your bills.
-            </p>
+            {insights.length === 0 ? (
+              <p className="mt-3 text-sm text-gray-500">
+                Not enough data yet to generate insights.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {insights.map((insight, idx) => (
+                  <li key={idx} className="flex items-start gap-2 text-sm">
+                    <span
+                      className={
+                        insight.type === "warning" ? "text-amber-400" : "text-green-400"
+                      }
+                    >
+                      {insight.type === "warning" ? "⚠" : "✓"}
+                    </span>
+                    <span className="text-gray-100">{insight.message}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         </div>
       </div>
