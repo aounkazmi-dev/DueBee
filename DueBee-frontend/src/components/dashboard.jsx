@@ -46,7 +46,6 @@ function Dashboard({ token, onLogout }) {
   const [consumption, setConsumption] = useState("");
 
   const [forecast, setForecast] = useState(null);
-  const [insights, setInsights] = useState([]);
 
   const fetchForecast = async (billsData) => {
     const uniqueCategories = [...new Set(billsData.map((b) => b.category))];
@@ -69,19 +68,6 @@ function Dashboard({ token, onLogout }) {
     setForecast(null);
   };
 
-  const fetchInsights = async () => {
-    try {
-      const res = await fetch(`${API_URL}/analytics/insights`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      setInsights(data.insights || []);
-    } catch {
-      setInsights([]);
-    }
-  };
-
   const fetchBills = async () => {
     setLoading(true);
     const res = await fetch(`${API_URL}/bills`, {
@@ -96,7 +82,6 @@ function Dashboard({ token, onLogout }) {
     setLoading(false);
 
     fetchForecast(data);
-    fetchInsights();
   };
 
   useEffect(() => {
@@ -138,6 +123,19 @@ function Dashboard({ token, onLogout }) {
       setStatus("unpaid");
       setConsumption("");
       setShowForm(false);
+      fetchBills();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleDeleteBill = async (billId) => {
+    try {
+      const res = await fetch(`${API_URL}/bills/${billId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Could not delete bill");
       fetchBills();
     } catch (err) {
       setError(err.message);
@@ -288,31 +286,40 @@ function Dashboard({ token, onLogout }) {
                           <p className="text-sm font-medium text-white">{bill.vendor}</p>
                           <p className="text-xs text-gray-500">{bill.category}</p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-gray-100">
-                            Rs {Number(bill.amount).toLocaleString()}
-                          </p>
-                          <p className={`text-xs ${days < 3 ? "text-red-400" : "text-gray-500"}`}>
-                            {isPastDue ? "overdue" : `${days} days`}
-                          </p>
-                          <div className="mt-1 flex items-center justify-end gap-1.5">
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                                STATUS_STYLES[bill.status] || STATUS_STYLES.unpaid
-                              }`}
-                            >
-                              {bill.status}
-                            </span>
-                            {bill.reminder_sent ? (
-                              <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-500/80">
-                                🔔 Reminder sent
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="text-sm font-semibold text-gray-100">
+                              Rs {Number(bill.amount).toLocaleString()}
+                            </p>
+                            <p className={`text-xs ${days < 3 ? "text-red-400" : "text-gray-500"}`}>
+                              {isPastDue ? "overdue" : `${days} days`}
+                            </p>
+                            <div className="mt-1 flex items-center justify-end gap-1.5">
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                  STATUS_STYLES[bill.status] || STATUS_STYLES.unpaid
+                                }`}
+                              >
+                                {bill.status}
                               </span>
-                            ) : !isPastDue ? (
-                              <span className="rounded-full bg-gray-500/10 px-2 py-0.5 text-[10px] font-medium text-gray-500">
-                                ⏳ Reminder pending
-                              </span>
-                            ) : null}
+                              {bill.reminder_sent ? (
+                                <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-500/80">
+                                  🔔 Reminder sent
+                                </span>
+                              ) : !isPastDue ? (
+                                <span className="rounded-full bg-gray-500/10 px-2 py-0.5 text-[10px] font-medium text-gray-500">
+                                  ⏳ Reminder pending
+                                </span>
+                              ) : null}
+                            </div>
                           </div>
+                          <button
+                            onClick={() => handleDeleteBill(bill.id)}
+                            title="Delete bill"
+                            className="text-gray-600 hover:text-red-400 text-sm px-1"
+                          >
+                            ✕
+                          </button>
                         </div>
                       </li>
                     );
@@ -350,33 +357,6 @@ function Dashboard({ token, onLogout }) {
                   {Math.abs(forecast.percent_change_vs_average)}% vs average
                 </p>
               </div>
-            )}
-          </section>
-
-          {/* AI Insights */}
-          <section className="p-6">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
-              AI Insights
-            </h2>
-            {insights.length === 0 ? (
-              <p className="mt-3 text-sm text-gray-500">
-                Not enough data yet to generate insights.
-              </p>
-            ) : (
-              <ul className="mt-3 space-y-2">
-                {insights.map((insight, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-sm">
-                    <span
-                      className={
-                        insight.type === "warning" ? "text-amber-400" : "text-green-400"
-                      }
-                    >
-                      {insight.type === "warning" ? "⚠" : "✓"}
-                    </span>
-                    <span className="text-gray-100">{insight.message}</span>
-                  </li>
-                ))}
-              </ul>
             )}
           </section>
         </div>
