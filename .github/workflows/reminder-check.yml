@@ -1,0 +1,15 @@
+name: Daily Bill Reminder Check
+
+on:
+  schedule:
+    - cron: "0 3 * * *"  # 8:00 AM UTC daily — adjust to your timezone as needed
+  workflow_dispatch:        # lets you trigger it manually to test
+
+jobs:
+  check-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call check-reminders endpoint
+        run: |
+          curl -X POST https://your-backend.onrender.com/bills/check-reminders \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}"
