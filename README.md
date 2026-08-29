@@ -287,8 +287,3 @@ Full interactive documentation, generated automatically by FastAPI, is available
 - Verified custom email domain to allow reminders to any user's address
 - Additional login providers (e.g. Google OAuth)
 
----
-
-## License
-
-This project was built as a university-level portfolio project.
