@@ -2,8 +2,8 @@ name: Daily Bill Reminder Check
 
 on:
   schedule:
-    - cron: "0 3 * * *"  # 8:00 AM UTC daily — adjust to your timezone as needed
-  workflow_dispatch:        # lets you trigger it manually to test
+    - cron: "0 3 * * *"  
+  workflow_dispatch:        
 
 jobs:
   check-reminders:
