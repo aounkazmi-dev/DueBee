@@ -16,6 +16,7 @@ class BillCreate(BaseModel):
 class BillOut(BillCreate):
     id: int
     created_at: datetime
+    reminder_sent: bool
 
     class Config:
         from_attributes = True
@@ -26,10 +27,9 @@ class UserCreate(BaseModel):
     password: str
 
 
-class BillOut(BillCreate):
+class UserOut(BaseModel):
     id: int
-    created_at: datetime
-    reminder_sent: bool
+    email: str
 
     class Config:
         from_attributes = True

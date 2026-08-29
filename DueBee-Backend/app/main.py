@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
-from app.routes import bills, auth, analytics
+from app.routes import bills, auth, analytics, reminders
 
 Base.metadata.create_all(bind=engine)
 
@@ -21,6 +21,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(bills.router)
 app.include_router(analytics.router)
+app.include_router(reminders.router)
 
 
 @app.get("/")

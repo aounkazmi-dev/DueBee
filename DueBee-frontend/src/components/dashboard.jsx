@@ -8,6 +8,12 @@ const STATUSES = ["unpaid", "paid", "overdue"];
 const inputClass =
   "w-full rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:outline-indigo-500";
 
+const STATUS_STYLES = {
+  unpaid: "bg-gray-500/10 text-gray-400",
+  paid: "bg-green-500/10 text-green-400",
+  overdue: "bg-red-500/10 text-red-400",
+};
+
 function Field({ label, hint, className = "", children }) {
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
@@ -274,6 +280,8 @@ function Dashboard({ token, onLogout }) {
                 <ul className="divide-y divide-white/10">
                   {upcoming.map((bill) => {
                     const days = daysUntil(bill.due_date);
+                    const isPastDue = days < 0;
+
                     return (
                       <li key={bill.id} className="flex items-center justify-between py-3">
                         <div>
@@ -285,8 +293,26 @@ function Dashboard({ token, onLogout }) {
                             Rs {Number(bill.amount).toLocaleString()}
                           </p>
                           <p className={`text-xs ${days < 3 ? "text-red-400" : "text-gray-500"}`}>
-                            {days < 0 ? "overdue" : `${days} days`}
+                            {isPastDue ? "overdue" : `${days} days`}
                           </p>
+                          <div className="mt-1 flex items-center justify-end gap-1.5">
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                STATUS_STYLES[bill.status] || STATUS_STYLES.unpaid
+                              }`}
+                            >
+                              {bill.status}
+                            </span>
+                            {bill.reminder_sent ? (
+                              <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-500/80">
+                                🔔 Reminder sent
+                              </span>
+                            ) : !isPastDue ? (
+                              <span className="rounded-full bg-gray-500/10 px-2 py-0.5 text-[10px] font-medium text-gray-500">
+                                ⏳ Reminder pending
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
                       </li>
                     );

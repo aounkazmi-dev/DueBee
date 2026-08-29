@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
@@ -34,3 +34,22 @@ def list_bills(
         .order_by(desc(Bill.due_date))
         .all()
     )
+
+
+@router.delete("/{bill_id}")
+def delete_bill(
+    bill_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    bill = (
+        db.query(Bill)
+        .filter(Bill.id == bill_id, Bill.user_id == current_user.id)
+        .first()
+    )
+    if not bill:
+        raise HTTPException(status_code=404, detail="Bill not found")
+
+    db.delete(bill)
+    db.commit()
+    return {"deleted": True}
