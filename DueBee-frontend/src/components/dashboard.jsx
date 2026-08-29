@@ -5,6 +5,21 @@ const API_URL = "http://localhost:8001";
 const CATEGORIES = ["Electricity", "Gas", "Water", "Internet", "Other"];
 const STATUSES = ["unpaid", "paid", "overdue"];
 
+const inputClass =
+  "w-full rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:outline-indigo-500";
+
+function Field({ label, hint, className = "", children }) {
+  return (
+    <div className={`flex flex-col gap-1 ${className}`}>
+      <label className="text-xs font-medium text-gray-400">
+        {label}
+        {hint && <span className="ml-1 font-normal text-gray-600">· {hint}</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
 function daysUntil(dueDate) {
   const diff = new Date(dueDate) - new Date();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
@@ -120,77 +135,95 @@ function Dashboard({ token, onLogout }) {
             </div>
 
             {showForm && (
-              <form onSubmit={handleAddBill} className="mt-4 grid grid-cols-2 gap-3">
-                <input
-                  value={vendor}
-                  onChange={(e) => setVendor(e.target.value)}
-                  required
-                  placeholder="Vendor (e.g. LESCO)"
-                  className="col-span-2 rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:outline-indigo-500"
-                />
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                  placeholder="Amount"
-                  className="rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:outline-indigo-500"
-                />
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 focus:outline-2 focus:outline-indigo-500"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c} className="bg-gray-900">
-                      {c}
-                    </option>
-                  ))}
-                </select>
-                <label className="text-xs text-gray-400 col-span-2 -mb-2">Due date</label>
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  required
-                  className="rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 focus:outline-2 focus:outline-indigo-500"
-                />
-                <label className="text-xs text-gray-400 -mb-2">Billing month (which month this bill is for)</label>
-                <input
-                  type="month"
-                  value={billingMonth}
-                  onChange={(e) => setBillingMonth(e.target.value + "")}
-                  required
-                  className="rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 focus:outline-2 focus:outline-indigo-500"
-                />
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 focus:outline-2 focus:outline-indigo-500"
-                >
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s} className="bg-gray-900">
-                      {s}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  value={consumption}
-                  onChange={(e) => setConsumption(e.target.value)}
-                  placeholder="Units consumed (optional)"
-                  className="rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:outline-indigo-500"
-                />
-                <button
-                  type="submit"
-                  className="col-span-2 mt-1 rounded-md bg-indigo-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-400"
-                >
-                  Save Bill
-                </button>
-                {error && <p className="col-span-2 text-sm text-red-400">{error}</p>}
-              </form>
-            )}
+  <form onSubmit={handleAddBill} className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4">
+    <Field label="Vendor" className="col-span-2">
+      <input
+        value={vendor}
+        onChange={(e) => setVendor(e.target.value)}
+        required
+        placeholder="e.g. LESCO"
+        className={inputClass}
+      />
+    </Field>
 
+    <Field label="Amount">
+      <input
+        type="number"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+        required
+        placeholder="Rs"
+        className={inputClass}
+      />
+    </Field>
+
+    <Field label="Category">
+      <select
+        value={category}
+        onChange={(e) => setCategory(e.target.value)}
+        className={inputClass}
+      >
+        {CATEGORIES.map((c) => (
+          <option key={c} value={c} className="bg-gray-900">
+            {c}
+          </option>
+        ))}
+      </select>
+    </Field>
+
+    <Field label="Due date">
+      <input
+        type="date"
+        value={dueDate}
+        onChange={(e) => setDueDate(e.target.value)}
+        required
+        className={inputClass}
+      />
+    </Field>
+
+    <Field label="Billing month" hint="Which month this bill covers">
+      <input
+        type="month"
+        value={billingMonth}
+        onChange={(e) => setBillingMonth(e.target.value)}
+        required
+        className={inputClass}
+      />
+    </Field>
+
+    <Field label="Status">
+      <select
+        value={status}
+        onChange={(e) => setStatus(e.target.value)}
+        className={inputClass}
+      >
+        {STATUSES.map((s) => (
+          <option key={s} value={s} className="bg-gray-900">
+            {s}
+          </option>
+        ))}
+      </select>
+    </Field>
+
+    <Field label="Units consumed" hint="Optional">
+      <input
+        type="number"
+        value={consumption}
+        onChange={(e) => setConsumption(e.target.value)}
+        placeholder="e.g. 320"
+        className={inputClass}
+      />
+    </Field>
+
+    <button
+      type="submit"
+      className="col-span-2 mt-1 rounded-md bg-indigo-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-400"
+    >
+      Save Bill
+    </button>
+    {error && <p className="col-span-2 text-sm text-red-400">{error}</p>}
+  </form>
+)}
             <div className="mt-4">
               {loading ? (
                 <p className="text-sm text-gray-500">Loading…</p>
