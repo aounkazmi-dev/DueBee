@@ -155,12 +155,12 @@ function Dashboard({ token, onLogout }) {
                   required
                   className="rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 focus:outline-2 focus:outline-indigo-500"
                 />
+                <label className="text-xs text-gray-400 -mb-2">Billing month (which month this bill is for)</label>
                 <input
                   type="month"
                   value={billingMonth}
                   onChange={(e) => setBillingMonth(e.target.value + "")}
                   required
-                  title="Billing month"
                   className="rounded-md bg-white/5 px-3 py-1.5 text-sm text-white outline-1 -outline-offset-1 outline-white/10 focus:outline-2 focus:outline-indigo-500"
                 />
                 <select
