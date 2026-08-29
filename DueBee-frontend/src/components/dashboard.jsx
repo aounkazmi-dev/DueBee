@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API_URL = "http://localhost:8001";
+const API_URL = import.meta.env.VITE_API_URL;
 
 const CATEGORIES = ["Electricity", "Gas", "Water", "Internet", "Other"];
 const STATUSES = ["unpaid", "paid", "overdue"];
